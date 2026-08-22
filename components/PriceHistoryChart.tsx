@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { PricePoint } from '../lib/types';
-import { TrendingDown, Calendar, AlertCircle } from 'lucide-react';
+import { PricePoint, formatINR } from '../lib/types';
+import { TrendingDown, Calendar } from 'lucide-react';
 
 interface PriceHistoryChartProps {
   priceHistory: PricePoint[];
@@ -29,14 +29,14 @@ export default function PriceHistoryChart({ priceHistory, predictedDrop }: Price
         <div>
           <div className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-emerald-400" />
-            <h3 className="font-semibold text-sm text-slate-200">Price Trend & Drop Forecast</h3>
+            <h3 className="font-semibold text-sm text-slate-200">Price Trend & Drop Forecast (INR)</h3>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">Historical tracking across major retailers</p>
+          <p className="text-xs text-slate-400 mt-0.5">Historical tracking across Amazon India, Flipkart & Croma</p>
         </div>
 
         <div className="text-right">
           <div className="text-xs text-slate-400">Current Lowest</div>
-          <div className="text-base font-bold text-emerald-400 font-mono">${currentPrice.toFixed(2)}</div>
+          <div className="text-base font-bold text-emerald-400 font-mono">{formatINR(currentPrice)}</div>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export default function PriceHistoryChart({ priceHistory, predictedDrop }: Price
                 
                 {/* Tooltip */}
                 <div className="absolute -top-8 bg-slate-950 border border-slate-700 px-2 py-0.5 rounded text-[10px] text-slate-200 font-mono opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none whitespace-nowrap shadow-lg">
-                  ${pt.price.toFixed(2)} ({pt.retailer})
+                  {formatINR(pt.price)} ({pt.retailer})
                 </div>
 
                 <div className="w-full bg-slate-950 rounded-t h-full flex items-end">
@@ -83,10 +83,10 @@ export default function PriceHistoryChart({ priceHistory, predictedDrop }: Price
             <Calendar className="h-4 w-4 text-emerald-400 shrink-0" />
             <div>
               <div className="text-xs font-semibold text-emerald-300">
-                AI Price Drop Predictor: Drop to ${predictedDrop.expectedPrice.toFixed(2)} expected in ~{predictedDrop.daysAway} days
+                AI Price Drop Predictor: Drop to {formatINR(predictedDrop.expectedPrice)} expected in ~{predictedDrop.daysAway} days
               </div>
               <div className="text-[11px] text-slate-400">
-                Confidence rating: {predictedDrop.confidence}% based on historical seasonal discount cycles
+                Confidence rating: {predictedDrop.confidence}% based on historical Diwali / Festival discount cycles in India
               </div>
             </div>
           </div>

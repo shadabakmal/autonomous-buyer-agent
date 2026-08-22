@@ -1,6 +1,6 @@
 export interface RetailerListing {
   id: string;
-  name: 'Amazon' | 'Best Buy' | 'eBay' | 'Walmart' | 'Target' | 'B&H Photo' | 'Keychron Direct' | string;
+  name: 'Amazon India' | 'Flipkart' | 'Croma' | 'Reliance Digital' | 'Tata CLiQ' | 'Keychron India' | string;
   logo: string;
   price: number;
   originalPrice: number;
@@ -149,4 +149,12 @@ export interface UserSettings {
     expiry: string;
     brand: string;
   };
+}
+
+export function formatINR(amount: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

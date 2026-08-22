@@ -2,12 +2,34 @@
 
 import React, { useState } from 'react';
 import Navbar from '../../components/Navbar';
-import { INITIAL_USER_SETTINGS } from '../../lib/mockData';
-import { UserSettings } from '../../lib/types';
-import { ShieldCheck, CreditCard, MapPin, Bell, Sliders, Save, Check } from 'lucide-react';
+import { UserSettings, formatINR } from '../../lib/types';
+import { ShieldCheck, CreditCard, MapPin, Sliders, Save, Check } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<UserSettings>(INITIAL_USER_SETTINGS);
+  const [settings, setSettings] = useState<UserSettings>({
+    maxSingleItemLimit: 50000,
+    monthlySpendLimit: 250000,
+    monthlySpent: 64990,
+    requireApprovalOver: 15000,
+    autoBuyEnabled: true,
+    smsNotifications: true,
+    emailNotifications: true,
+    preferredStores: ['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital'],
+    shippingAddress: {
+      name: 'Alex Johnson',
+      street: '742 Evergreen Terrace',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94107',
+    },
+    paymentMethod: {
+      type: 'Credit Card',
+      last4: '4829',
+      expiry: '08/28',
+      brand: 'Visa Infinite',
+    },
+  });
+
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleSave = (e: React.FormEvent) => {
@@ -26,10 +48,10 @@ export default function SettingsPage() {
         <div className="border-b border-slate-800 pb-6">
           <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <ShieldCheck className="h-4 w-4" />
-            Autonomous Protection & Wallet Control
+            Autonomous Protection & Wallet Control (INR ₹)
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100">Safety Guardrails & Settings</h1>
-          <p className="text-xs text-slate-400 mt-1">Configure spending limits, approval triggers, and payment methods</p>
+          <p className="text-xs text-slate-400 mt-1">Configure spending limits in ₹, approval triggers, and payment methods</p>
         </div>
 
         {savedSuccess && (
@@ -45,13 +67,13 @@ export default function SettingsPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 space-y-6 shadow-xl">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-100 border-b border-slate-800 pb-3">
               <Sliders className="h-4 w-4 text-cyan-400" />
-              Autonomous Spending Caps & Thresholds
+              Autonomous Spending Caps & Thresholds (in ₹ INR)
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Single Item Maximum Limit ($)
+                  Single Item Maximum Limit (₹)
                 </label>
                 <input
                   type="number"
@@ -60,13 +82,13 @@ export default function SettingsPage() {
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm text-slate-100 font-mono focus:border-cyan-500 focus:outline-none"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Agent will never buy any single item costing more than this amount automatically.
+                  Agent will never buy any single item costing more than {formatINR(settings.maxSingleItemLimit)} automatically.
                 </p>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Monthly Total Spend Cap ($)
+                  Monthly Total Spend Cap (₹)
                 </label>
                 <input
                   type="number"
@@ -82,7 +104,7 @@ export default function SettingsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Require 1-Tap Manual Approval for Purchases Over ($)
+                Require 1-Tap Manual Approval for Purchases Over (₹)
               </label>
               <input
                 type="number"
@@ -96,15 +118,15 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Section 2: Preferred Retailers */}
+          {/* Section 2: Preferred Indian Retailers */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 space-y-4 shadow-xl">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-100 border-b border-slate-800 pb-3">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              Approved Retailers Matrix
+              Approved Storefronts Matrix (India & Global)
             </div>
 
             <div className="flex flex-wrap gap-3">
-              {['Amazon', 'Best Buy', 'B&H Photo', 'Target', 'eBay', 'Walmart'].map((store) => {
+              {['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital', 'Tata CLiQ', 'Keychron Direct'].map((store) => {
                 const isSelected = settings.preferredStores.includes(store);
                 return (
                   <button
@@ -140,7 +162,7 @@ export default function SettingsPage() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 space-y-6 shadow-xl">
             <div className="flex items-center gap-2 text-sm font-bold text-slate-100 border-b border-slate-800 pb-3">
               <CreditCard className="h-4 w-4 text-indigo-400" />
-              Sandbox Wallet & Default Shipping Address
+              Razorpay Test Wallet & Default Delivery Address
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -157,9 +179,9 @@ export default function SettingsPage() {
 
               <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
                 <div className="flex items-center gap-2 font-semibold text-slate-200">
-                  <CreditCard className="h-4 w-4 text-emerald-400" /> Payment Credential
+                  <CreditCard className="h-4 w-4 text-emerald-400" /> Razorpay Payment Credential
                 </div>
-                <div className="text-slate-300">{settings.paymentMethod.brand}</div>
+                <div className="text-slate-300">UPI / Razorpay Test Card</div>
                 <div className="font-mono text-slate-400">•••• •••• •••• {settings.paymentMethod.last4}</div>
                 <div className="text-slate-400">Expires: {settings.paymentMethod.expiry}</div>
               </div>

@@ -2,19 +2,69 @@
 
 import React, { useState } from 'react';
 import Navbar from '../../components/Navbar';
-import { INITIAL_RULES, INITIAL_USER_SETTINGS } from '../../lib/mockData';
-import { AutoBuyRule, UserSettings } from '../../lib/types';
-import { Sliders, Plus, Trash2, Pause, Play, ShieldCheck, Check, Clock } from 'lucide-react';
+import { AutoBuyRule, UserSettings, formatINR } from '../../lib/types';
+import { Sliders, Plus, Trash2, Pause, Play } from 'lucide-react';
 
 export default function WatchlistsPage() {
-  const [rules, setRules] = useState<AutoBuyRule[]>(INITIAL_RULES);
-  const [settings] = useState<UserSettings>(INITIAL_USER_SETTINGS);
+  const [settings] = useState<UserSettings>({
+    maxSingleItemLimit: 50000,
+    monthlySpendLimit: 250000,
+    monthlySpent: 64990,
+    requireApprovalOver: 15000,
+    autoBuyEnabled: true,
+    smsNotifications: true,
+    emailNotifications: true,
+    preferredStores: ['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital'],
+    shippingAddress: {
+      name: 'Alex Johnson',
+      street: '742 Evergreen Terrace',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94107',
+    },
+    paymentMethod: {
+      type: 'Credit Card',
+      last4: '4829',
+      expiry: '08/28',
+      brand: 'Visa Infinite',
+    },
+  });
 
-  // New Rule Form Modal State
+  const [rules, setRules] = useState<AutoBuyRule[]>([
+    {
+      id: 'rule-1',
+      productName: 'Sony WH-1000XM5 Noise Canceling Headphones',
+      category: 'Audio',
+      targetPrice: 24990,
+      currentLowestPrice: 26990,
+      maxBudget: 30000,
+      requireApproval: false,
+      minRating: 4.5,
+      status: 'active',
+      createdAt: '2026-08-10',
+      lastChecked: '5 mins ago',
+      image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&auto=format&fit=crop&q=80',
+    },
+    {
+      id: 'rule-2',
+      productName: 'Keychron Q1 Pro Mechanical Keyboard',
+      category: 'Peripherals',
+      targetPrice: 14500,
+      currentLowestPrice: 15999,
+      maxBudget: 18000,
+      requireApproval: true,
+      minRating: 4.6,
+      status: 'active',
+      createdAt: '2026-08-15',
+      lastChecked: '12 mins ago',
+      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&auto=format&fit=crop&q=80',
+    },
+  ]);
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProdName, setNewProdName] = useState('');
-  const [newTargetPrice, setNewTargetPrice] = useState(150);
-  const [newMaxBudget, setNewMaxBudget] = useState(250);
+  const [newTargetPrice, setNewTargetPrice] = useState(12000);
+  const [newMaxBudget, setNewMaxBudget] = useState(20000);
   const [newReqAppr, setNewReqAppr] = useState(true);
 
   const handleTogglePause = (id: string) => {
@@ -44,7 +94,7 @@ export default function WatchlistsPage() {
       productName: newProdName,
       category: 'Electronics',
       targetPrice: Number(newTargetPrice),
-      currentLowestPrice: Number(newTargetPrice) + 15,
+      currentLowestPrice: Number(newTargetPrice) + 1500,
       maxBudget: Number(newMaxBudget),
       requireApproval: newReqAppr,
       minRating: 4.5,
@@ -70,7 +120,7 @@ export default function WatchlistsPage() {
           <div>
             <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs uppercase tracking-wider mb-1">
               <Sliders className="h-4 w-4" />
-              Automated Purchasing Triggers
+              Automated Purchasing Triggers (INR)
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100">Auto-Buy Watchlist Manager</h1>
           </div>
@@ -87,7 +137,7 @@ export default function WatchlistsPage() {
         {/* Create Rule Form Card */}
         {showAddForm && (
           <form onSubmit={handleCreateRule} className="rounded-2xl border border-cyan-500/30 bg-slate-900/90 p-6 space-y-4 shadow-2xl">
-            <h3 className="font-bold text-base text-cyan-400">Add New Automated Purchasing Rule</h3>
+            <h3 className="font-bold text-base text-cyan-400">Add New Automated Purchasing Rule (in ₹)</h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
@@ -103,7 +153,7 @@ export default function WatchlistsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Auto-Buy Price ($)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Target Auto-Buy Price (₹)</label>
                 <input
                   type="number"
                   value={newTargetPrice}
@@ -114,7 +164,7 @@ export default function WatchlistsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Max Ceiling Budget ($)</label>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Max Ceiling Budget (₹)</label>
                 <input
                   type="number"
                   value={newMaxBudget}
@@ -186,10 +236,10 @@ export default function WatchlistsPage() {
 
                     <div className="flex flex-wrap items-center gap-4 text-xs font-mono pt-1">
                       <div className="text-slate-400">
-                        Target Price: <strong className="text-emerald-400">${rule.targetPrice}</strong>
+                        Target Price: <strong className="text-emerald-400">{formatINR(rule.targetPrice)}</strong>
                       </div>
                       <div className="text-slate-400">
-                        Lowest Right Now: <strong className="text-slate-200">${rule.currentLowestPrice}</strong>
+                        Lowest Right Now: <strong className="text-slate-200">{formatINR(rule.currentLowestPrice)}</strong>
                       </div>
                       <div className="text-slate-400">
                         Require Approval: <strong className="text-cyan-400">{rule.requireApproval ? 'Yes' : 'No'}</strong>

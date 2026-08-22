@@ -3,8 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bot, ShieldCheck, ShoppingCart, Sliders, Zap, History, Scale } from 'lucide-react';
-import { UserSettings } from '../lib/types';
+import { Bot, ShieldCheck, Sliders, Zap, History, Scale } from 'lucide-react';
+import { UserSettings, formatINR } from '../lib/types';
 
 interface NavbarProps {
   settings: UserSettings;
@@ -69,17 +69,17 @@ export default function Navbar({ settings }: NavbarProps) {
           })}
         </nav>
 
-        {/* Right Section: Budget & Status */}
+        {/* Right Section: Budget & Status (Formatted in INR ₹) */}
         <div className="flex items-center gap-4">
           {/* Monthly Budget Guardrail Widget */}
           <div className="hidden sm:flex flex-col items-end bg-slate-900/80 border border-slate-800 rounded-lg px-3 py-1.5">
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400">Monthly Cap:</span>
-              <span className="font-semibold text-slate-200">${settings.monthlySpendLimit}</span>
+              <span className="font-semibold text-slate-200">{formatINR(settings.monthlySpendLimit)}</span>
               <span className="text-xs text-slate-500">|</span>
-              <span className="text-emerald-400 font-medium">${remainingBudget.toFixed(0)} left</span>
+              <span className="text-emerald-400 font-medium">{formatINR(remainingBudget)} left</span>
             </div>
-            <div className="mt-1 w-32 bg-slate-800 rounded-full h-1.5 overflow-hidden">
+            <div className="mt-1 w-36 bg-slate-800 rounded-full h-1.5 overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
                   budgetPercentage > 85

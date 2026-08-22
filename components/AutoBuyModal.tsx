@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Product, RetailerListing, UserSettings } from '../lib/types';
-import { X, ShieldCheck, Zap, AlertCircle, Lock, Check } from 'lucide-react';
+import { Product, RetailerListing, UserSettings, formatINR } from '../lib/types';
+import { X, ShieldCheck, Zap, Lock, Check } from 'lucide-react';
 
 interface AutoBuyModalProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ export default function AutoBuyModal({
   onSaveRule,
 }: AutoBuyModalProps) {
   const [activeTab, setActiveTab] = useState<'instant' | 'trigger'>('instant');
-  const [targetPrice, setTargetPrice] = useState<number>(product ? Math.round(product.retailers[0].price * 0.9) : 150);
+  const [targetPrice, setTargetPrice] = useState<number>(product ? Math.round(product.retailers[0].price * 0.9) : 15000);
   const [requireApproval, setRequireApproval] = useState<boolean>(true);
 
   if (!isOpen || !product || !retailer) return null;
@@ -51,7 +51,7 @@ export default function AutoBuyModal({
           </div>
           <div>
             <h3 className="font-bold text-lg text-slate-100">Autonomous Buyer Dispatch</h3>
-            <p className="text-xs text-slate-400">Execute instant purchase or set background monitoring trigger</p>
+            <p className="text-xs text-slate-400">Execute instant purchase or set background monitoring trigger in INR (₹)</p>
           </div>
         </div>
 
@@ -86,7 +86,7 @@ export default function AutoBuyModal({
             <h4 className="font-semibold text-xs text-slate-100 truncate">{product.name}</h4>
             <div className="text-[11px] text-slate-400 mt-0.5">Selected Retailer: <strong className="text-slate-200">{retailer.name}</strong></div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="font-mono font-bold text-sm text-emerald-400">${retailer.price.toFixed(2)}</span>
+              <span className="font-mono font-bold text-sm text-emerald-400">{formatINR(retailer.price)}</span>
               <span className="text-[10px] text-slate-400">({retailer.shipping})</span>
             </div>
           </div>
@@ -107,8 +107,8 @@ export default function AutoBuyModal({
               </div>
               <p className="text-[11px] opacity-90">
                 {isOverLimit
-                  ? `Item cost ($${totalCost.toFixed(2)}) exceeds your max single spend cap ($${settings.maxSingleItemLimit}). Explicit confirmation granted via this step.`
-                  : `Within your per-item limit ($${settings.maxSingleItemLimit}) and monthly remaining budget ($${(settings.monthlySpendLimit - settings.monthlySpent).toFixed(2)}).`}
+                  ? `Item cost (${formatINR(totalCost)}) exceeds your max single spend cap (${formatINR(settings.maxSingleItemLimit)}). Explicit confirmation granted via this step.`
+                  : `Within your per-item limit (${formatINR(settings.maxSingleItemLimit)}) and monthly remaining budget (${formatINR(settings.monthlySpendLimit - settings.monthlySpent)}).`}
               </p>
             </div>
 
@@ -120,7 +120,7 @@ export default function AutoBuyModal({
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Payment Wallet:</span>
-                <span className="font-medium text-slate-200">{settings.paymentMethod.brand} (*{settings.paymentMethod.last4})</span>
+                <span className="font-medium text-slate-200">UPI / Razorpay Test ({settings.paymentMethod.brand})</span>
               </div>
             </div>
 
@@ -132,7 +132,7 @@ export default function AutoBuyModal({
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-emerald-400 hover:from-cyan-400 hover:to-emerald-300 text-slate-950 font-bold text-sm py-3 rounded-xl transition-all shadow-lg shadow-cyan-500/20"
             >
               <Lock className="h-4 w-4" />
-              Confirm & Authorize Agent Purchase (${totalCost.toFixed(2)})
+              Confirm & Authorize Agent Purchase ({formatINR(totalCost)})
             </button>
           </div>
         )}
@@ -142,10 +142,10 @@ export default function AutoBuyModal({
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Target Auto-Buy Price Threshold
+                Target Auto-Buy Price Threshold (₹ INR)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-slate-400 text-sm font-mono">$</span>
+                <span className="absolute left-3 top-2.5 text-slate-400 text-sm font-mono">₹</span>
                 <input
                   type="number"
                   value={targetPrice}
@@ -154,7 +154,7 @@ export default function AutoBuyModal({
                 />
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Agent will automatically buy when price drops to or below this target across preferred retailers.
+                Agent will automatically buy when price drops to or below this target across Indian stores (Amazon.in, Flipkart, Croma).
               </p>
             </div>
 

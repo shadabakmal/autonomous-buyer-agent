@@ -9,9 +9,8 @@ import SentimentAnalyzer from '../../components/SentimentAnalyzer';
 import PriceHistoryChart from '../../components/PriceHistoryChart';
 import AutoBuyModal from '../../components/AutoBuyModal';
 import { runAgentTaskSimulation } from '../../lib/agentEngine';
-import { MOCK_PRODUCTS, INITIAL_USER_SETTINGS } from '../../lib/mockData';
-import { AgentTask, AgentStep, Product, RetailerListing, UserSettings, Order } from '../../lib/types';
-import { Bot, Send, User, Sparkles, Zap, RefreshCw, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { AgentTask, AgentStep, Product, RetailerListing, UserSettings, formatINR } from '../../lib/types';
+import { Bot, Send, User, Sparkles, RefreshCw } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -29,7 +28,29 @@ function AgentChatInner() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentSteps, setCurrentSteps] = useState<AgentStep[]>([]);
-  const [settings, setSettings] = useState<UserSettings>(INITIAL_USER_SETTINGS);
+  const [settings, setSettings] = useState<UserSettings>({
+    maxSingleItemLimit: 50000,
+    monthlySpendLimit: 250000,
+    monthlySpent: 64990,
+    requireApprovalOver: 15000,
+    autoBuyEnabled: true,
+    smsNotifications: true,
+    emailNotifications: true,
+    preferredStores: ['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital'],
+    shippingAddress: {
+      name: 'Alex Johnson',
+      street: '742 Evergreen Terrace',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94107',
+    },
+    paymentMethod: {
+      type: 'Credit Card',
+      last4: '4829',
+      expiry: '08/28',
+      brand: 'Visa Infinite',
+    },
+  });
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -83,11 +104,11 @@ function AgentChatInner() {
 
     const agentMsgId = `msg-agent-${Date.now()}`;
 
-    let replyText = `I have finished analyzing live prices and customer reviews across major stores for "${queryText}".`;
+    let replyText = `I have finished analyzing live prices and customer reviews across Indian stores for "${queryText}".`;
     if (result.autoPurchased) {
-      replyText = `🎉 **Autonomous Purchase Executed!** I found the best deal on **${result.selectedRetailer.name}** for **$${result.selectedRetailer.price.toFixed(2)}**. Since it satisfied all your guardrails, I automatically placed the order.`;
+      replyText = `🎉 **Autonomous Purchase Executed!** I found the best deal on **${result.selectedRetailer.name}** for **${formatINR(result.selectedRetailer.price)}**. Since it satisfied all your guardrails, I automatically placed the order.`;
     } else if (result.task.status === 'waiting_approval') {
-      replyText = `⚠️ **Guardrail Notice**: I found the top recommended model on **${result.selectedRetailer.name}** for **$${result.selectedRetailer.price.toFixed(2)}**, but it requires your confirmation before checkout.`;
+      replyText = `⚠️ **Guardrail Notice**: I found the top recommended model on **${result.selectedRetailer.name}** for **${formatINR(result.selectedRetailer.price)}**, but it requires your confirmation before checkout.`;
     }
 
     setMessages((prev) => [
@@ -124,7 +145,7 @@ function AgentChatInner() {
             </div>
             <div>
               <h1 className="font-bold text-lg text-slate-100">Interactive Autonomous Buyer Chat</h1>
-              <p className="text-xs text-slate-400">Prompt your agent, monitor live tool execution, and inspect AI sentiment</p>
+              <p className="text-xs text-slate-400">Prompt your agent, monitor live tool execution, and inspect AI sentiment in Indian Rupees (₹)</p>
             </div>
           </div>
 
@@ -147,15 +168,15 @@ function AgentChatInner() {
               </div>
               <h2 className="text-xl font-bold text-slate-100">What would you like your Buyer Agent to find?</h2>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Describe the item, your budget, preferred brands, or price drop trigger. The agent will query retailers in real-time, cross-reference verified buyer reviews, check your safety guardrails, and recommend or auto-purchase.
+                Describe the item, your budget (in ₹), preferred stores (Amazon India, Flipkart, Croma), or price drop trigger. The agent will query retailers in real-time, cross-reference verified buyer reviews, check your safety guardrails, and recommend or auto-purchase.
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left pt-2">
                 {[
-                  'Find Sony WH-1000XM5 headphones under $330',
-                  'Compare LG OLED TVs vs Samsung QLED',
-                  'Buy Keychron mechanical keyboard with tactile switches',
-                  'Find fast 200W power bank for travel',
+                  'Find Sony WH-1000XM5 headphones under ₹28,000',
+                  'Compare OLED TVs vs QLED TVs on Flipkart & Croma',
+                  'Buy Keychron mechanical keyboard under ₹15,000',
+                  'Find fast 100W laptop power bank under ₹6,000',
                 ].map((sample, idx) => (
                   <button
                     key={idx}
@@ -194,7 +215,7 @@ function AgentChatInner() {
                   <p className="whitespace-pre-line">{msg.text}</p>
                 </div>
 
-                {/* Agent Task Details (Steppers, Product Card, Sentiment Breakdown) */}
+                {/* Agent Task Details */}
                 {msg.task && msg.task.matchedProduct && (
                   <div className="space-y-6 pt-2">
                     
@@ -208,7 +229,7 @@ function AgentChatInner() {
                           Agent Top Recommendation
                         </span>
                         <span className="text-xs font-mono font-bold text-emerald-400">
-                          Best Offer: ${msg.task.selectedRetailer?.price.toFixed(2)} on {msg.task.selectedRetailer?.name}
+                          Best Offer: {formatINR(msg.task.selectedRetailer?.price || 0)} on {msg.task.selectedRetailer?.name}
                         </span>
                       </div>
 
@@ -249,7 +270,7 @@ function AgentChatInner() {
             <div className="space-y-4 max-w-3xl">
               <div className="flex items-center gap-2 text-xs font-medium text-cyan-400">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span>Agent active — Querying storefronts & analyzing review sentiment...</span>
+                <span>Agent active — Querying Indian storefronts & analyzing review sentiment...</span>
               </div>
               {currentSteps.length > 0 && <AgentExecutionLog steps={currentSteps} />}
             </div>
@@ -268,7 +289,7 @@ function AgentChatInner() {
         >
           <input
             type="text"
-            placeholder="Type a new request (e.g. 'Find Anker power bank under $90' or 'Compare LG OLED TV prices')..."
+            placeholder="Type a request in ₹ (e.g. 'Find laptop under ₹45,000' or 'Compare Sony XM5 price on Flipkart')..."
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             disabled={isProcessing}

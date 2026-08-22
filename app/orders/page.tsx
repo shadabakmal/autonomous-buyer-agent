@@ -2,13 +2,72 @@
 
 import React, { useState } from 'react';
 import Navbar from '../../components/Navbar';
-import { INITIAL_ORDERS, INITIAL_USER_SETTINGS } from '../../lib/mockData';
-import { Order, UserSettings } from '../../lib/types';
-import { History, Package, Truck, CheckCircle2, Bot, ExternalLink, Receipt } from 'lucide-react';
+import { Order, UserSettings, formatINR } from '../../lib/types';
+import { History, Bot } from 'lucide-react';
 
 export default function OrdersPage() {
-  const [orders] = useState<Order[]>(INITIAL_ORDERS);
-  const [settings] = useState<UserSettings>(INITIAL_USER_SETTINGS);
+  const [settings] = useState<UserSettings>({
+    maxSingleItemLimit: 50000,
+    monthlySpendLimit: 250000,
+    monthlySpent: 64990,
+    requireApprovalOver: 15000,
+    autoBuyEnabled: true,
+    smsNotifications: true,
+    emailNotifications: true,
+    preferredStores: ['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital'],
+    shippingAddress: {
+      name: 'Alex Johnson',
+      street: '742 Evergreen Terrace',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94107',
+    },
+    paymentMethod: {
+      type: 'Credit Card',
+      last4: '4829',
+      expiry: '08/28',
+      brand: 'Visa Infinite',
+    },
+  });
+
+  const [orders] = useState<Order[]>([
+    {
+      id: 'ord-10492',
+      orderNumber: 'ABA-89302-IN',
+      productId: 'prod-anker-prime-20k',
+      productName: 'Anker Prime 20,000mAh Power Bank (200W Output)',
+      productImage: 'https://images.unsplash.com/photo-1609592424074-b52b2f6b43d3?w=300&auto=format&fit=crop&q=80',
+      retailer: 'Amazon India',
+      pricePaid: 7649,
+      shippingCost: 0,
+      tax: 612,
+      total: 8261,
+      purchasedAt: '2026-08-18 14:32',
+      status: 'delivered',
+      trackingNumber: 'TBA309182390192',
+      estimatedDelivery: '2026-08-19',
+      agentReasoning: 'Trigger condition met: Price dropped to ₹7,649 (below ₹8,000 limit). Amazon India Prime same-day selected for best speed and lowest price.',
+      autoPurchased: true,
+    },
+    {
+      id: 'ord-10441',
+      orderNumber: 'ABA-77104-IN',
+      productId: 'prod-logitech-mx3a',
+      productName: 'Logitech MX Master 3S Wireless Mouse',
+      productImage: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=300&auto=format&fit=crop&q=80',
+      retailer: 'Flipkart',
+      pricePaid: 8499,
+      shippingCost: 0,
+      tax: 680,
+      total: 9179,
+      purchasedAt: '2026-08-05 10:15',
+      status: 'delivered',
+      trackingNumber: 'FKB999999999999',
+      estimatedDelivery: '2026-08-07',
+      agentReasoning: 'Manual approval confirmed by user Alex Johnson. Flipkart offered immediate delivery.',
+      autoPurchased: false,
+    },
+  ]);
 
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
@@ -33,10 +92,10 @@ export default function OrdersPage() {
         <div className="border-b border-slate-800 pb-6">
           <div className="flex items-center gap-2 text-indigo-400 font-semibold text-xs uppercase tracking-wider mb-1">
             <History className="h-4 w-4" />
-            Autonomous Transaction Log & Invoices
+            Autonomous Transaction Log & Invoices (INR ₹)
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100">Order History & Receipts</h1>
-          <p className="text-xs text-slate-400 mt-1">Audit log of all orders executed by your buyer agent</p>
+          <p className="text-xs text-slate-400 mt-1">Audit log of all orders executed by your buyer agent across Indian stores</p>
         </div>
 
         {/* Orders List */}
@@ -63,7 +122,7 @@ export default function OrdersPage() {
 
                 <div className="text-right">
                   <div className="text-xs text-slate-400">Total Billed</div>
-                  <div className="text-lg font-bold text-emerald-400 font-mono">${ord.total.toFixed(2)}</div>
+                  <div className="text-lg font-bold text-emerald-400 font-mono">{formatINR(ord.total)}</div>
                 </div>
               </div>
 
@@ -74,9 +133,9 @@ export default function OrdersPage() {
                 <div className="flex-1 space-y-1">
                   <h3 className="font-bold text-base text-slate-100">{ord.productName}</h3>
                   <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
-                    <span>Item Price: ${ord.pricePaid.toFixed(2)}</span>
-                    <span>Tax: ${ord.tax.toFixed(2)}</span>
-                    <span>Shipping: {ord.shippingCost === 0 ? 'FREE' : `$${ord.shippingCost.toFixed(2)}`}</span>
+                    <span>Item Price: {formatINR(ord.pricePaid)}</span>
+                    <span>GST Tax: {formatINR(ord.tax)}</span>
+                    <span>Shipping: {ord.shippingCost === 0 ? 'FREE' : formatINR(ord.shippingCost)}</span>
                   </div>
                 </div>
 

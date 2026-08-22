@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ShieldCheck, Zap, Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, ShieldCheck, Lock, Loader2, CheckCircle2 } from 'lucide-react';
+import { formatINR } from '../lib/types';
 
 interface RazorpayCheckoutModalProps {
   isOpen: boolean;
@@ -30,7 +31,6 @@ export default function RazorpayCheckoutModal({
     setStep('processing');
 
     try {
-      // 1. Call Create Order API
       const orderRes = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,8 +38,6 @@ export default function RazorpayCheckoutModal({
           amount,
           currency: 'INR',
           merchantName,
-          userMaxCap: 1000,
-          monthlyRemaining: 3000,
         }),
       });
 
@@ -52,12 +50,10 @@ export default function RazorpayCheckoutModal({
         return;
       }
 
-      // Simulate payment execution
       setTimeout(async () => {
         const paymentId = `pay_${Math.random().toString(36).substring(2, 12)}`;
         const signature = `rzp_test_sig_${Math.random().toString(36).substring(2, 12)}`;
 
-        // 2. Call Verify Signature API
         await fetch('/api/razorpay/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -103,7 +99,7 @@ export default function RazorpayCheckoutModal({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h3 className="font-bold text-sm text-slate-100">Razorpay Test-Mode Gateway</h3>
+              <h3 className="font-bold text-sm text-slate-100">Razorpay Test-Mode Gateway (INR)</h3>
               <span className="rounded bg-blue-500/20 text-blue-300 text-[9px] font-bold px-1.5 py-0.2">TEST MODE</span>
             </div>
             <p className="text-[11px] text-slate-400">Merchant: {merchantName}</p>
@@ -115,11 +111,11 @@ export default function RazorpayCheckoutModal({
             <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2 text-xs">
               <div className="flex justify-between text-slate-400">
                 <span>Item / Bundle:</span>
-                <span className="font-semibold text-slate-200">{productName}</span>
+                <span className="font-semibold text-slate-200 truncate max-w-[200px]">{productName}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Total Amount:</span>
-                <span className="font-bold text-emerald-400 font-mono text-sm">${amount.toFixed(2)}</span>
+                <span className="font-bold text-emerald-400 font-mono text-sm">{formatINR(amount)}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>Payment Method:</span>
@@ -129,7 +125,7 @@ export default function RazorpayCheckoutModal({
 
             <div className="rounded-xl bg-emerald-950/20 border border-emerald-500/20 p-3 text-[11px] text-emerald-300 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 shrink-0" />
-              Policy Bounded Check: Amount within pre-authorized AI buyer limits ($1,000 max).
+              Policy Bounded Check: Amount within pre-authorized AI buyer limits.
             </div>
 
             <button
@@ -138,7 +134,7 @@ export default function RazorpayCheckoutModal({
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition-all"
             >
               <Lock className="h-4 w-4" />
-              Pay ${amount.toFixed(2)} via Razorpay Test API
+              Pay {formatINR(amount)} via Razorpay Test API
             </button>
           </div>
         )}

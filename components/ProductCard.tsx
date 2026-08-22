@@ -1,10 +1,9 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Product, RetailerListing } from '../lib/types';
-import { Star, ShieldCheck, Tag, ExternalLink, Zap, ArrowRight } from 'lucide-react';
+import { Product, RetailerListing, formatINR } from '../lib/types';
+import { Star, Tag, Zap, ArrowRight } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -54,11 +53,11 @@ export default function ProductCard({ product, onSelectBuy, onSetRule }: Product
           <p className="mt-1 text-xs text-slate-400 line-clamp-2 leading-relaxed">{product.description}</p>
         </div>
 
-        {/* Store Compare Matrix */}
+        {/* Store Compare Matrix (INR ₹) */}
         <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
           <div className="text-[11px] font-semibold text-slate-400 flex items-center justify-between">
-            <span>STORE MATRIX</span>
-            <span className="text-emerald-400 font-mono text-xs font-bold">Best: ${bestRetailer.price.toFixed(2)}</span>
+            <span>INDIAN STORE MATRIX</span>
+            <span className="text-emerald-400 font-mono text-xs font-bold">Best: {formatINR(bestRetailer.price)}</span>
           </div>
 
           <div className="space-y-1.5">
@@ -84,10 +83,10 @@ export default function ProductCard({ product, onSelectBuy, onSetRule }: Product
                 <div className="flex items-center gap-3 font-mono">
                   {ret.originalPrice > ret.price && (
                     <span className="line-through text-slate-500 text-[10px]">
-                      ${ret.originalPrice.toFixed(2)}
+                      {formatINR(ret.originalPrice)}
                     </span>
                   )}
-                  <span className="font-bold text-slate-100">${ret.price.toFixed(2)}</span>
+                  <span className="font-bold text-slate-100">{formatINR(ret.price)}</span>
                 </div>
               </div>
             ))}

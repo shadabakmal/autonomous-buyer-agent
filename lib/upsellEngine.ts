@@ -12,25 +12,30 @@ export interface UpsellOffer {
 }
 
 export function generateUpsellOffersForProduct(product: Product): UpsellOffer[] {
+  const baseInrPrice = product.retailers[0]?.price || 25000;
+  
+  const protectPrice = Math.round(baseInrPrice * 0.08);
+  const bundlePrice = Math.round(baseInrPrice * 0.06);
+
   return [
     {
       id: `upsell-${product.id}-protect`,
-      title: '2-Year Accidental Damage & Express Replacement Shield',
-      description: 'Covers drops, spills, and electrical surge with 0 deductible and 24/7 priority agent support.',
-      originalPrice: 49.99,
-      bundlePrice: 29.99,
-      savingsPercentage: 40,
-      aovBoostAmount: 29.99,
+      title: '2-Year Official India Damage & Liquid Protection Shield',
+      description: 'Covers drops, accidental spills, and voltage surges with 0 deductible and 24/7 brand service.',
+      originalPrice: Math.round(protectPrice * 1.5),
+      bundlePrice: protectPrice,
+      savingsPercentage: 35,
+      aovBoostAmount: protectPrice,
       badge: 'HIGH MARGIN UPSELL',
     },
     {
       id: `upsell-${product.id}-bundle`,
-      title: 'Pro Accessory Care & Premium Fast Charger Kit',
-      description: 'Custom molded travel case + 100W braided nylon fast charging cable.',
-      originalPrice: 39.99,
-      bundlePrice: 24.99,
-      savingsPercentage: 37,
-      aovBoostAmount: 24.99,
+      title: 'Premium Fast Charging Kit & Braided Cable Bundle',
+      description: '65W GaN Dual USB-C Fast Charger + 2M Military Grade Braided Cable.',
+      originalPrice: Math.round(bundlePrice * 1.4),
+      bundlePrice: bundlePrice,
+      savingsPercentage: 30,
+      aovBoostAmount: bundlePrice,
       badge: 'TOP CONVERSION BUNDLE',
     },
   ];

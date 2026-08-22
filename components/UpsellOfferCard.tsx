@@ -3,6 +3,7 @@
 import React from 'react';
 import { UpsellOffer } from '../lib/upsellEngine';
 import { TrendingUp, Plus, Check } from 'lucide-react';
+import { formatINR } from '../lib/types';
 
 interface UpsellOfferCardProps {
   offer: UpsellOffer;
@@ -27,7 +28,7 @@ export default function UpsellOfferCard({ offer, isSelected, onToggle }: UpsellO
               {offer.badge}
             </span>
             <span className="text-[10px] text-cyan-400 font-mono flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" /> +{offer.aovBoostAmount} AOV Boost
+              <TrendingUp className="h-3 w-3" /> +{formatINR(offer.aovBoostAmount)} AOV Boost
             </span>
           </div>
 
@@ -36,8 +37,8 @@ export default function UpsellOfferCard({ offer, isSelected, onToggle }: UpsellO
         </div>
 
         <div className="text-right shrink-0">
-          <div className="text-xs font-mono font-bold text-emerald-400">+${offer.bundlePrice.toFixed(2)}</div>
-          <div className="line-through text-[10px] text-slate-500 font-mono">${offer.originalPrice.toFixed(2)}</div>
+          <div className="text-xs font-mono font-bold text-emerald-400">+{formatINR(offer.bundlePrice)}</div>
+          <div className="line-through text-[10px] text-slate-500 font-mono">{formatINR(offer.originalPrice)}</div>
           <div className="mt-2 flex justify-end">
             <div className={`flex h-6 w-6 items-center justify-center rounded-lg border ${
               isSelected ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-700 bg-slate-950 text-slate-400'
