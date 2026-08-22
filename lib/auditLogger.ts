@@ -60,7 +60,7 @@ export async function fetchRecentAuditLogs(limit: number = 20): Promise<AuditLog
     take: limit,
   });
 
-  return logs.map((log) => ({
+  return logs.map((log: any) => ({
     id: log.id,
     userId: log.userId || undefined,
     timestamp: log.timestamp.toISOString(),
