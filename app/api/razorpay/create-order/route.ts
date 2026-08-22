@@ -1,70 +1,46 @@
 import { NextResponse } from 'next/server';
-import { createRazorpayTestOrder } from '../../../../lib/razorpay';
-import { evaluateMoneyAction } from '../../../../lib/policyEngine';
-import { logAuditEntry } from '../../../../lib/auditLogger';
+import { getAuthenticatedUserContext } from '../../../../lib/auth';
+import { checkRateLimit } from '../../../../lib/rateLimit';
+import { executeBoundedFinancialPipeline } from '../../../../lib/financialPipeline';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { amount, currency = 'INR', merchantName = 'AuraSound Direct', userMaxCap = 500, monthlyRemaining = 2000 } = body;
-
-    // Evaluate Bounded Money Action Policy
-    const policyResult = evaluateMoneyAction({
-      amount: Number(amount),
-      currency,
-      merchantId: 'merch-aurasound-india-001',
-      merchantName,
-      buyerAgentId: 'agent-buyer-007',
-      userMaxCap: Number(userMaxCap),
-      monthlyRemaining: Number(monthlyRemaining),
-      isTestMode: true,
-    });
-
-    if (!policyResult.approved) {
-      logAuditEntry({
-        transactionId: `TXN-${Date.now()}`,
-        merchantName,
-        amount: Number(amount),
-        currency,
-        status: 'BLOCKED_BY_POLICY',
-        policyChecks: policyResult.checks,
-        explanation: policyResult.explanation,
-        failureReason: 'Policy Engine Check Failed (Financial Guardrail Breach)',
-        recoveryAction: 'Intercepted & sent 1-tap approval request to user.',
-      });
-
-      return NextResponse.json(
-        {
-          error: 'Financial policy guardrail breach',
-          approved: false,
-          checks: policyResult.checks,
-          explanation: policyResult.explanation,
-        },
-        { status: 400 }
-      );
+    // 1. Server-Side Authentication & User Lookup
+    const authContext = await getAuthenticatedUserContext(req);
+    if (!authContext) {
+      return NextResponse.json({ error: 'Unauthorized: Session authentication required', errorCode: 'UNAUTHORIZED' }, { status: 401 });
     }
 
-    // Policy Approved -> Create Razorpay Test Order
-    const order = await createRazorpayTestOrder(Number(amount), currency);
+    // 2. Sliding Window Rate Limit Check
+    const rateLimit = checkRateLimit(authContext.user.id, 10, 60000);
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Rate limit exceeded.', errorCode: 'RATE_LIMITED' }, { status: 429 });
+    }
 
-    logAuditEntry({
-      transactionId: `TXN-${Date.now()}`,
-      merchantName,
-      amount: Number(amount),
-      currency,
-      status: 'AUTHORIZED',
-      policyChecks: policyResult.checks,
-      explanation: 'Authorized by Policy Engine. Razorpay Test Order Created.',
-      razorpayOrderId: order.id,
-    });
+    // 3. Read Body Parameters (ONLY product/amount/merchant metadata — NEVER spend limits!)
+    const body = await req.json();
+    const { amount, currency = 'INR', merchantName = 'AuraSound Direct Merchant', merchantId } = body;
 
-    return NextResponse.json({
-      success: true,
-      order,
-      approved: true,
-      checks: policyResult.checks,
-    });
+    const idempotencyKey = req.headers.get('x-idempotency-key') || undefined;
+
+    // 4. Execute Bounded Financial Pipeline (Spend limits are strictly fetched from authContext.settings)
+    const result = await executeBoundedFinancialPipeline(
+      {
+        amount: Number(amount),
+        currency,
+        merchantId,
+        merchantName,
+        idempotencyKey,
+      },
+      authContext
+    );
+
+    if (!result.success) {
+      return NextResponse.json(result, { status: result.errorCode === 'POLICY_BLOCKED' ? 400 : 500 });
+    }
+
+    return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create order' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Server error', errorCode: 'INTERNAL_ERROR' }, { status: 500 });
   }
 }

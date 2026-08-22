@@ -18,7 +18,6 @@ export async function createRazorpayTestOrder(
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
-  // Convert to smallest currency unit (e.g. paisa for INR)
   const amountInSmallestUnit = Math.round(amountInUnits * 100);
 
   if (keyId && keySecret) {
@@ -42,15 +41,14 @@ export async function createRazorpayTestOrder(
       });
 
       if (response.ok) {
-        const data = await response.json();
-        return data;
+        return await response.json();
       }
     } catch (err) {
-      console.warn('Razorpay API call failed, falling back to Sandbox Order Engine:', err);
+      console.error('Razorpay API error:', err);
     }
   }
 
-  // Realistic Sandbox Fallback for Test Mode
+  // Fallback test order generator when API keys are pending setup
   return {
     id: `order_${Math.random().toString(36).substring(2, 12)}`,
     entity: 'order',
@@ -62,24 +60,32 @@ export async function createRazorpayTestOrder(
   };
 }
 
+export function generateRazorpayTestSignature(orderId: string, paymentId: string, secret: string = process.env.RAZORPAY_KEY_SECRET || 'sandbox_secret_key'): string {
+  const hmac = crypto.createHmac('sha256', secret);
+  hmac.update(`${orderId}|${paymentId}`);
+  return hmac.digest('hex');
+}
+
 export function verifyRazorpaySignature(
   orderId: string,
   paymentId: string,
   signature: string,
-  keySecret: string = process.env.RAZORPAY_KEY_SECRET || 'sandbox_test_secret'
+  keySecret: string = process.env.RAZORPAY_KEY_SECRET || 'sandbox_secret_key'
 ): boolean {
-  if (!signature) return false;
-  
-  // In sandbox simulation, validate standard test signatures
-  if (signature.startsWith('rzp_test_sig_') || signature === 'valid_sandbox_sig') {
-    return true;
+  if (!orderId || !paymentId || !signature) {
+    return false;
   }
 
   try {
     const hmac = crypto.createHmac('sha256', keySecret);
     hmac.update(`${orderId}|${paymentId}`);
     const generatedSignature = hmac.digest('hex');
-    return generatedSignature === signature;
+    
+    // Constant time comparison to prevent timing attacks
+    return crypto.timingSafeEqual(
+      Buffer.from(generatedSignature, 'utf-8'),
+      Buffer.from(signature, 'utf-8')
+    );
   } catch (e) {
     return false;
   }

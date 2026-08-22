@@ -1,0 +1,121 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String
+  createdAt    DateTime      @default(now())
+  settings     UserSettings?
+  rules        AutoBuyRule[]
+  orders       Order[]
+  auditLogs    AuditLog[]
+}
+
+model UserSettings {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  maxSingleItemLimit   Float    @default(500.0)
+  monthlySpendLimit    Float    @default(2500.0)
+  monthlySpent         Float    @default(649.99)
+  requireApprovalOver Float    @default(200.0)
+  autoBuyEnabled       Boolean  @default(true)
+  preferredStores      String   @default("[\"Amazon\",\"Best Buy\",\"B&H Photo\",\"Target\"]")
+  shippingAddress      String   @default("{\"name\":\"Alex Johnson\",\"street\":\"742 Evergreen Terrace\",\"city\":\"San Francisco\",\"state\":\"CA\",\"zip\":\"94107\"}")
+  paymentMethod        String   @default("{\"type\":\"Credit Card\",\"last4\":\"4829\",\"expiry\":\"08/28\",\"brand\":\"Visa Infinite\"}")
+  updatedAt            DateTime @updatedAt
+}
+
+model Product {
+  id               String         @id
+  name             String
+  category         String
+  brand            String
+  image            String
+  description      String
+  rating           Float
+  reviewCount      Int
+  specs            String         // JSON stringified object
+  sentimentSummary String         // JSON stringified ReviewSentiment
+  retailers        String         // JSON stringified RetailerListing[]
+  priceHistory     PriceHistory[]
+  orders           Order[]
+}
+
+model PriceHistory {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  date      String
+  price     Float
+  retailer  String
+}
+
+model AutoBuyRule {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productName        String
+  category           String
+  targetPrice        Float
+  currentLowestPrice Float
+  maxBudget          Float
+  requireApproval    Boolean  @default(true)
+  minRating          Float    @default(4.5)
+  status             String   @default("active")
+  createdAt          DateTime @default(now())
+  lastChecked        DateTime @updatedAt
+  image              String
+}
+
+model Order {
+  id                String   @id @default(uuid())
+  orderNumber       String   @unique
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId         String
+  product           Product  @relation(fields: [productId], references: [id])
+  retailer          String
+  pricePaid         Float
+  shippingCost      Float
+  tax               Float
+  total             Float
+  purchasedAt       DateTime @default(now())
+  status            String   @default("confirmed")
+  trackingNumber    String
+  estimatedDelivery String
+  agentReasoning    String
+  autoPurchased     Boolean  @default(false)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+}
+
+model AuditLog {
+  id                String   @id @default(uuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  timestamp         DateTime @default(now())
+  transactionId     String
+  merchantName      String
+  amount            Float
+  currency          String
+  status            String
+  policyChecks      String   // JSON stringified PolicyCheckResult[]
+  explanation       String
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  failureReason     String?
+  recoveryAction    String?
+}
+
+model IdempotencyKey {
+  key       String   @id
+  createdAt DateTime @default(now())
+  response  String   // JSON stringified response payload
+}

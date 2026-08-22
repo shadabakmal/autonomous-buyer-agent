@@ -1,13 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MerchantNavbar from '../../../components/MerchantNavbar';
 import MoneyAuditTrail from '../../../components/MoneyAuditTrail';
-import { GLOBAL_AUDIT_LOGS } from '../../../lib/auditLogger';
+import { AuditLogEntry } from '../../../lib/auditLogger';
 import { ShieldCheck, Lock } from 'lucide-react';
 
 export default function MerchantAuditPage() {
-  const [logs] = useState(GLOBAL_AUDIT_LOGS);
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+
+  useEffect(() => {
+    fetch('/api/audit')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.logs) {
+          setLogs(data.logs);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">

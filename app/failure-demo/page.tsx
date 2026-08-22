@@ -1,13 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import MerchantNavbar from '../../components/MerchantNavbar';
 import FailureRecoveryCard from '../../components/FailureRecoveryCard';
 import MoneyAuditTrail from '../../components/MoneyAuditTrail';
-import { GLOBAL_AUDIT_LOGS } from '../../lib/auditLogger';
+import { AuditLogEntry } from '../../lib/auditLogger';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function FailureDemoPage() {
+  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
+
+  useEffect(() => {
+    fetch('/api/audit')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.logs) {
+          setLogs(data.logs);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       <MerchantNavbar />
@@ -30,7 +43,7 @@ export default function FailureDemoPage() {
         <FailureRecoveryCard />
 
         {/* Audit Log Stream */}
-        <MoneyAuditTrail logs={GLOBAL_AUDIT_LOGS} />
+        <MoneyAuditTrail logs={logs} />
 
       </main>
     </div>
