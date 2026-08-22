@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateAgenticCatalogResponse } from '../../../../lib/agenticCatalog';
 
 export async function GET() {
-  const catalog = generateAgenticCatalogResponse();
+  const catalog = await generateAgenticCatalogResponse();
   return NextResponse.json(catalog, {
     headers: {
       'Access-Control-Allow-Origin': '*',
