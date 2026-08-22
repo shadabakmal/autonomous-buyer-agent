@@ -1,22 +1,41 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MerchantNavbar from '../../components/MerchantNavbar';
 import UpsellOfferCard from '../../components/UpsellOfferCard';
 import RazorpayCheckoutModal from '../../components/RazorpayCheckoutModal';
-import { MOCK_PRODUCTS } from '../../lib/mockData';
 import { generateUpsellOffersForProduct, UpsellOffer } from '../../lib/upsellEngine';
 import { Product } from '../../lib/types';
-import { TrendingUp, Zap, DollarSign, Bot, ShoppingCart, ArrowRight, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Zap, Bot, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export default function MerchantDashboardPage() {
-  const [selectedProduct, setSelectedProduct] = useState<Product>(MOCK_PRODUCTS[0]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedUpsells, setSelectedUpsells] = useState<UpsellOffer[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const upsellOffers = generateUpsellOffersForProduct(selectedProduct);
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const res = await fetch('/api/products?q=laptops');
+        const data = await res.json();
+        if (data && data.products && data.products.length > 0) {
+          setProducts(data.products);
+          setSelectedProduct(data.products[0]);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProducts();
+  }, []);
 
-  const basePrice = selectedProduct.retailers[0].price;
+  const upsellOffers = selectedProduct ? generateUpsellOffersForProduct(selectedProduct) : [];
+
+  const basePrice = selectedProduct?.retailers[0]?.price || 0;
   const upsellTotal = selectedUpsells.reduce((acc, u) => acc + u.bundlePrice, 0);
   const totalCartPrice = basePrice + upsellTotal;
 
@@ -102,90 +121,101 @@ export default function MerchantDashboardPage() {
             </div>
 
             {/* Selector */}
-            <select
-              value={selectedProduct.id}
-              onChange={(e) => {
-                const p = MOCK_PRODUCTS.find((m) => m.id === e.target.value);
-                if (p) {
-                  setSelectedProduct(p);
-                  setSelectedUpsells([]);
-                }
-              }}
-              className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-emerald-500 focus:outline-none"
-            >
-              {MOCK_PRODUCTS.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+            {products.length > 0 && (
+              <select
+                value={selectedProduct?.id || ''}
+                onChange={(e) => {
+                  const p = products.find((m) => m.id === e.target.value);
+                  if (p) {
+                    setSelectedProduct(p);
+                    setSelectedUpsells([]);
+                  }
+                }}
+                className="rounded-xl border border-slate-800 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-emerald-500 focus:outline-none"
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Product Card */}
-            <div className="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-3">
-              <img src={selectedProduct.image} alt={selectedProduct.name} className="h-40 w-full object-cover rounded-xl bg-slate-900 border border-slate-800" />
-              <div>
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{selectedProduct.brand}</span>
-                <h3 className="font-bold text-sm text-slate-100 line-clamp-1">{selectedProduct.name}</h3>
-                <div className="text-sm font-mono font-bold text-emerald-400 mt-1">${basePrice.toFixed(2)}</div>
-              </div>
+          {loading || !selectedProduct ? (
+            <div className="py-16 text-center space-y-3 rounded-2xl border border-slate-800 bg-slate-950">
+              <RefreshCw className="h-8 w-8 text-emerald-400 animate-spin mx-auto" />
+              <div className="text-xs font-semibold text-slate-300">Loading live merchant products over API...</div>
             </div>
-
-            {/* AI Upsell Recommendations */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                AI Agent Proposed Upsell Recommendations (Revenue Growth Engine)
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                {upsellOffers.map((offer) => (
-                  <UpsellOfferCard
-                    key={offer.id}
-                    offer={offer}
-                    isSelected={selectedUpsells.some((u) => u.id === offer.id)}
-                    onToggle={handleToggleUpsell}
-                  />
-                ))}
-              </div>
-
-              {/* Checkout Calculation Summary */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              
+              {/* Product Card */}
+              <div className="lg:col-span-1 rounded-2xl border border-slate-800 bg-slate-950 p-5 space-y-3">
+                <img src={selectedProduct.image} alt={selectedProduct.name} className="h-40 w-full object-cover rounded-xl bg-slate-900 border border-slate-800" />
                 <div>
-                  <div className="text-xs text-slate-400">Total Cart Value (Base + Upsells):</div>
-                  <div className="text-2xl font-extrabold text-emerald-400 font-mono">${totalCartPrice.toFixed(2)}</div>
-                  {upsellTotal > 0 && (
-                    <div className="text-[11px] text-cyan-400 font-medium">+${upsellTotal.toFixed(2)} added via AI Upsells</div>
-                  )}
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{selectedProduct.brand}</span>
+                  <h3 className="font-bold text-sm text-slate-100 line-clamp-1">{selectedProduct.name}</h3>
+                  <div className="text-sm font-mono font-bold text-emerald-400 mt-1">${basePrice.toFixed(2)}</div>
+                </div>
+              </div>
+
+              {/* AI Upsell Recommendations */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  AI Agent Proposed Upsell Recommendations (Revenue Growth Engine)
                 </div>
 
-                <button
-                  onClick={() => setModalOpen(true)}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs py-3 px-6 shadow-lg shadow-emerald-500/20 transition-all"
-                >
-                  <Zap className="h-4 w-4 fill-slate-950" />
-                  Execute Razorpay Test Checkout
-                </button>
+                <div className="grid grid-cols-1 gap-3">
+                  {upsellOffers.map((offer) => (
+                    <UpsellOfferCard
+                      key={offer.id}
+                      offer={offer}
+                      isSelected={selectedUpsells.some((u) => u.id === offer.id)}
+                      onToggle={handleToggleUpsell}
+                    />
+                  ))}
+                </div>
+
+                {/* Checkout Calculation Summary */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs text-slate-400">Total Cart Value (Base + Upsells):</div>
+                    <div className="text-2xl font-extrabold text-emerald-400 font-mono">${totalCartPrice.toFixed(2)}</div>
+                    {upsellTotal > 0 && (
+                      <div className="text-[11px] text-cyan-400 font-medium">+${upsellTotal.toFixed(2)} added via AI Upsells</div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setModalOpen(true)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-bold text-xs py-3 px-6 shadow-lg shadow-emerald-500/20 transition-all"
+                  >
+                    <Zap className="h-4 w-4 fill-slate-950" />
+                    Execute Razorpay Test Checkout
+                  </button>
+                </div>
+
               </div>
 
             </div>
-
-          </div>
+          )}
         </section>
 
       </main>
 
       {/* Razorpay Modal */}
-      <RazorpayCheckoutModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        amount={totalCartPrice}
-        productName={`${selectedProduct.name} ${selectedUpsells.length > 0 ? `(+ ${selectedUpsells.length} Upsells)` : ''}`}
-        merchantName="AuraSound Direct Merchant"
-        onSuccess={() => {
-          setSelectedUpsells([]);
-        }}
-      />
+      {selectedProduct && (
+        <RazorpayCheckoutModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          amount={totalCartPrice}
+          productName={`${selectedProduct.name} ${selectedUpsells.length > 0 ? `(+ ${selectedUpsells.length} Upsells)` : ''}`}
+          merchantName="AuraSound Direct Merchant"
+          onSuccess={() => {
+            setSelectedUpsells([]);
+          }}
+        />
+      )}
     </div>
   );
 }

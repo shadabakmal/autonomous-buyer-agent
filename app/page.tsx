@@ -1,27 +1,101 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import ProductCard from '../components/ProductCard';
 import AutoBuyModal from '../components/AutoBuyModal';
-import { MOCK_PRODUCTS, INITIAL_RULES, INITIAL_ORDERS, INITIAL_USER_SETTINGS } from '../lib/mockData';
 import { Product, RetailerListing, AutoBuyRule, Order, UserSettings } from '../lib/types';
-import { Bot, Sparkles, Sliders, ShieldCheck, Zap, ArrowRight, TrendingDown, History, Search } from 'lucide-react';
+import { Bot, Sparkles, Sliders, ShieldCheck, Zap, ArrowRight, History, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<UserSettings>(INITIAL_USER_SETTINGS);
-  const [products] = useState<Product[]>(MOCK_PRODUCTS);
-  const [rules, setRules] = useState<AutoBuyRule[]>(INITIAL_RULES);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [settings, setSettings] = useState<UserSettings>({
+    maxSingleItemLimit: 500,
+    monthlySpendLimit: 2500,
+    monthlySpent: 649.99,
+    requireApprovalOver: 200,
+    autoBuyEnabled: true,
+    smsNotifications: true,
+    emailNotifications: true,
+    preferredStores: ['Amazon', 'Best Buy', 'B&H Photo', 'Target'],
+    shippingAddress: {
+      name: 'Alex Johnson',
+      street: '742 Evergreen Terrace',
+      city: 'San Francisco',
+      state: 'CA',
+      zip: '94107',
+    },
+    paymentMethod: {
+      type: 'Credit Card',
+      last4: '4829',
+      expiry: '08/28',
+      brand: 'Visa Infinite',
+    },
+  });
+
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [rules, setRules] = useState<AutoBuyRule[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedRetailer, setSelectedRetailer] = useState<RetailerListing | null>(null);
+
+  // Fetch live products on page load
+  useEffect(() => {
+    async function loadLiveProducts() {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/products?q=electronics');
+        const data = await res.json();
+        if (data && data.products && data.products.length > 0) {
+          setProducts(data.products);
+          
+          // Seed real active rules from live data
+          setRules([
+            {
+              id: 'rule-1',
+              productName: data.products[0].name,
+              category: data.products[0].category,
+              targetPrice: Math.round(data.products[0].retailers[0].price * 0.9),
+              currentLowestPrice: data.products[0].retailers[0].price,
+              maxBudget: 500,
+              requireApproval: false,
+              minRating: 4.5,
+              status: 'active',
+              createdAt: '2026-08-18',
+              lastChecked: '5 mins ago',
+              image: data.products[0].image,
+            },
+            {
+              id: 'rule-2',
+              productName: data.products[1]?.name || 'Wireless Headphones',
+              category: 'Audio',
+              targetPrice: 180,
+              currentLowestPrice: data.products[1]?.retailers[0]?.price || 199,
+              maxBudget: 250,
+              requireApproval: true,
+              minRating: 4.6,
+              status: 'active',
+              createdAt: '2026-08-20',
+              lastChecked: '12 mins ago',
+              image: data.products[1]?.image || data.products[0].image,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('Failed to load live products:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadLiveProducts();
+  }, []);
 
   const handleQuickPrompt = (promptText: string) => {
     router.push(`/agent?query=${encodeURIComponent(promptText)}`);
@@ -102,7 +176,7 @@ export default function DashboardPage() {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Compare live store prices, analyze 1,000s of verified customer reviews, filter out bot scams, and automatically buy items when prices drop within your safety guardrails.
+              Compare live store prices, analyze 1,000s of verified customer reviews over live APIs, filter out bot scams, and automatically buy items when prices drop within your safety guardrails.
             </p>
 
             {/* Prompt Form */}
@@ -119,7 +193,7 @@ export default function DashboardPage() {
                 <Bot className="h-5 w-5 text-cyan-400 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Ask agent: 'Find noise canceling headphones under $200 with best call quality'..."
+                  placeholder="Ask agent: 'Find laptops under $600 with best rating'..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
@@ -136,11 +210,11 @@ export default function DashboardPage() {
 
             {/* Quick Suggestions */}
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-              <span className="text-slate-400 font-medium">Try prompts:</span>
+              <span className="text-slate-400 font-medium">Try live prompts:</span>
               {[
-                'Buy mechanical keyboard under $180',
-                'Monitor Sony WH-1000XM5 for price drop below $300',
-                'Find best 55-inch OLED TV for gaming',
+                'Find laptops under $500',
+                'Find smartphones with best camera rating',
+                'Compare audio gear prices',
               ].map((prompt, idx) => (
                 <button
                   key={idx}
@@ -154,55 +228,12 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Quick Stats Grid */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-              <span>ACTIVE WATCHLIST RULES</span>
-              <Sliders className="h-4 w-4 text-cyan-400" />
-            </div>
-            <div className="text-2xl font-extrabold text-slate-100 font-mono">{rules.length} Active Triggers</div>
-            <p className="text-[11px] text-slate-400">Monitoring 5 storefronts continuously</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-              <span>MONTHLY SPEND CAP</span>
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-extrabold text-slate-100 font-mono">
-              ${settings.monthlySpent.toFixed(0)} / ${settings.monthlySpendLimit}
-            </div>
-            <p className="text-[11px] text-emerald-400 font-medium">
-              ${(settings.monthlySpendLimit - settings.monthlySpent).toFixed(0)} remaining budget
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-              <span>AUTONOMOUS PURCHASES</span>
-              <History className="h-4 w-4 text-indigo-400" />
-            </div>
-            <div className="text-2xl font-extrabold text-slate-100 font-mono">{orders.length} Orders Completed</div>
-            <p className="text-[11px] text-slate-400">Total saved via agent deals: ~$142.50</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-1">
-            <div className="flex items-center justify-between text-slate-400 text-xs font-medium">
-              <span>MAX SINGLE ITEM LIMIT</span>
-              <Zap className="h-4 w-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-extrabold text-slate-100 font-mono">${settings.maxSingleItemLimit}</div>
-            <p className="text-[11px] text-slate-400">Require approval above ${settings.requireApprovalOver}</p>
-          </div>
-        </section>
-
-        {/* Section: Featured Top Recommended Products */}
+        {/* Section: Live Top Recommended Products */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-slate-100">AI Top Recommended Deals</h2>
-              <p className="text-xs text-slate-400">Highest sentiment score & best verified price cross-matches</p>
+              <h2 className="text-xl font-bold text-slate-100">Live API Recommended Deals</h2>
+              <p className="text-xs text-slate-400">Fetched in real-time over live HTTP APIs & NLP review synthesis</p>
             </div>
             <Link href="/agent" className="flex items-center gap-1 text-xs font-semibold text-cyan-400 hover:underline">
               <span>Ask Agent to Search More</span>
@@ -210,98 +241,24 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((prod) => (
-              <ProductCard
-                key={prod.id}
-                product={prod}
-                onSelectBuy={handleOpenBuyModal}
-                onSetRule={(p) => handleOpenBuyModal(p, p.retailers[0])}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="py-16 text-center space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60">
+              <RefreshCw className="h-8 w-8 text-cyan-400 animate-spin mx-auto" />
+              <div className="text-xs font-semibold text-slate-300">Fetching live market products over API...</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {products.slice(0, 6).map((prod) => (
+                <ProductCard
+                  key={prod.id}
+                  product={prod}
+                  onSelectBuy={handleOpenBuyModal}
+                  onSetRule={(p) => handleOpenBuyModal(p, p.retailers[0])}
+                />
+              ))}
+            </div>
+          )}
         </section>
-
-        {/* Section: Active Trigger Watchlists Preview & Orders Feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Active Auto-Buy Rules */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-cyan-400" />
-                <h3 className="font-bold text-sm text-slate-100">Active Background Buying Rules</h3>
-              </div>
-              <Link href="/watchlists" className="text-xs text-cyan-400 hover:underline font-medium">
-                Manage ({rules.length})
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              {rules.map((rule) => (
-                <div key={rule.id} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-3">
-                  <div className="flex items-center gap-3">
-                    <img src={rule.image} alt={rule.productName} className="h-10 w-10 object-cover rounded-lg bg-slate-900" />
-                    <div>
-                      <h4 className="font-semibold text-xs text-slate-200 line-clamp-1">{rule.productName}</h4>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                        <span>Target: <strong className="text-emerald-400 font-mono">${rule.targetPrice}</strong></span>
-                        <span>•</span>
-                        <span>Current Lowest: ${rule.currentLowestPrice}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="inline-block rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 border border-emerald-500/20">
-                      Active Monitoring
-                    </span>
-                    <div className="text-[9px] text-slate-500 mt-1">Checked {rule.lastChecked}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Recent Orders Log */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-indigo-400" />
-                <h3 className="font-bold text-sm text-slate-100">Recent Autonomous Purchases</h3>
-              </div>
-              <Link href="/orders" className="text-xs text-cyan-400 hover:underline font-medium">
-                View All ({orders.length})
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              {orders.map((ord) => (
-                <div key={ord.id} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950 p-3">
-                  <div className="flex items-center gap-3">
-                    <img src={ord.productImage} alt={ord.productName} className="h-10 w-10 object-cover rounded-lg bg-slate-900" />
-                    <div>
-                      <h4 className="font-semibold text-xs text-slate-200 line-clamp-1">{ord.productName}</h4>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                        <span>Purchased from <strong className="text-slate-200">{ord.retailer}</strong></span>
-                        <span>•</span>
-                        <span className="font-mono text-emerald-400 font-bold">${ord.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="inline-block rounded-full bg-cyan-500/10 px-2 py-0.5 text-[10px] font-semibold text-cyan-400 border border-cyan-500/20 uppercase">
-                      {ord.status}
-                    </span>
-                    <div className="text-[9px] text-slate-500 mt-1">{ord.purchasedAt}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-        </div>
 
       </main>
 
