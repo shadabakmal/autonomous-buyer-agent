@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar';
 import SentimentAnalyzer from '../../components/SentimentAnalyzer';
 import PriceHistoryChart from '../../components/PriceHistoryChart';
 import AutoBuyModal from '../../components/AutoBuyModal';
-import { Product, RetailerListing, UserSettings } from '../../lib/types';
+import { Product, RetailerListing, UserSettings, formatINR } from '../../lib/types';
 import { Scale, Star, Zap, RefreshCw } from 'lucide-react';
 
 export default function ComparePage() {
@@ -13,14 +13,14 @@ export default function ComparePage() {
   const [loading, setLoading] = useState(true);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [settings, setSettings] = useState<UserSettings>({
-    maxSingleItemLimit: 500,
-    monthlySpendLimit: 2500,
-    monthlySpent: 649.99,
-    requireApprovalOver: 200,
+    maxSingleItemLimit: 50000,
+    monthlySpendLimit: 250000,
+    monthlySpent: 64990,
+    requireApprovalOver: 15000,
     autoBuyEnabled: true,
     smsNotifications: true,
     emailNotifications: true,
-    preferredStores: ['Amazon', 'Best Buy', 'B&H Photo', 'Target'],
+    preferredStores: ['Amazon India', 'Flipkart', 'Croma', 'Reliance Digital'],
     shippingAddress: {
       name: 'Alex Johnson',
       street: '742 Evergreen Terrace',
@@ -41,13 +41,22 @@ export default function ComparePage() {
   const [selectedRetailer, setSelectedRetailer] = useState<RetailerListing | null>(null);
 
   useEffect(() => {
-    async function loadProducts() {
+    async function loadData() {
       try {
-        const res = await fetch('/api/products?q=smartphones');
-        const data = await res.json();
-        if (data && data.products && data.products.length > 0) {
-          setProducts(data.products);
-          setSelectedProductId(data.products[0].id);
+        const [prodRes, setRes] = await Promise.all([
+          fetch('/api/products?q=smartphones'),
+          fetch('/api/settings'),
+        ]);
+
+        const prodData = await prodRes.json();
+        if (prodData && prodData.products && prodData.products.length > 0) {
+          setProducts(prodData.products);
+          setSelectedProductId(prodData.products[0].id);
+        }
+
+        const setData = await setRes.json();
+        if (setData && setData.settings) {
+          setSettings(setData.settings);
         }
       } catch (err) {
         console.error(err);
@@ -55,7 +64,7 @@ export default function ComparePage() {
         setLoading(false);
       }
     }
-    loadProducts();
+    loadData();
   }, []);
 
   const selectedProduct = products.find((p) => p.id === selectedProductId) || products[0];
@@ -76,7 +85,7 @@ export default function ComparePage() {
           <div>
             <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs uppercase tracking-wider mb-1">
               <Scale className="h-4 w-4" />
-              Multi-Retailer Price & Sentiment Intelligence Hub
+              Multi-Retailer Price & Sentiment Intelligence Hub (INR ₹)
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-100">Product Deep Dive & Store Matrix</h1>
           </div>
@@ -92,7 +101,7 @@ export default function ComparePage() {
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (${p.retailers[0].price})
+                    {p.name} ({formatINR(p.retailers[0].price)})
                   </option>
                 ))}
               </select>
@@ -103,7 +112,7 @@ export default function ComparePage() {
         {loading || !selectedProduct ? (
           <div className="py-16 text-center space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60">
             <RefreshCw className="h-8 w-8 text-cyan-400 animate-spin mx-auto" />
-            <div className="text-xs font-semibold text-slate-300">Loading live multi-store comparison matrix...</div>
+            <div className="text-xs font-semibold text-slate-300">Loading live multi-store comparison matrix in INR...</div>
           </div>
         ) : (
           <>
@@ -138,7 +147,7 @@ export default function ComparePage() {
               </div>
             </div>
 
-            {/* Retailer Store Comparison Table */}
+            {/* Retailer Store Comparison Table (Formatted in formatINR ₹) */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-lg text-slate-100">Live Cross-Store Matrix ({selectedProduct.retailers.length} Retailers)</h3>
@@ -173,10 +182,10 @@ export default function ComparePage() {
                         </td>
 
                         <td className="py-4 px-4 font-mono">
-                          <div className="text-sm font-bold text-emerald-400">${ret.price.toFixed(2)}</div>
+                          <div className="text-sm font-bold text-emerald-400">{formatINR(ret.price)}</div>
                           {ret.originalPrice > ret.price && (
                             <div className="line-through text-slate-500 text-[10px]">
-                              MSRP ${ret.originalPrice.toFixed(2)}
+                              MSRP {formatINR(ret.originalPrice)}
                             </div>
                           )}
                         </td>

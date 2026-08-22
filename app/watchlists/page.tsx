@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import { AutoBuyRule, UserSettings, formatINR } from '../../lib/types';
-import { Sliders, Plus, Trash2, Pause, Play } from 'lucide-react';
+import { Sliders, Plus, Trash2, Pause, Play, RefreshCw } from 'lucide-react';
 
 export default function WatchlistsPage() {
-  const [settings] = useState<UserSettings>({
+  const [settings, setSettings] = useState<UserSettings>({
     maxSingleItemLimit: 50000,
     monthlySpendLimit: 250000,
     monthlySpent: 64990,
@@ -30,42 +30,55 @@ export default function WatchlistsPage() {
     },
   });
 
-  const [rules, setRules] = useState<AutoBuyRule[]>([
-    {
-      id: 'rule-1',
-      productName: 'Sony WH-1000XM5 Noise Canceling Headphones',
-      category: 'Audio',
-      targetPrice: 24990,
-      currentLowestPrice: 26990,
-      maxBudget: 30000,
-      requireApproval: false,
-      minRating: 4.5,
-      status: 'active',
-      createdAt: '2026-08-10',
-      lastChecked: '5 mins ago',
-      image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&auto=format&fit=crop&q=80',
-    },
-    {
-      id: 'rule-2',
-      productName: 'Keychron Q1 Pro Mechanical Keyboard',
-      category: 'Peripherals',
-      targetPrice: 14500,
-      currentLowestPrice: 15999,
-      maxBudget: 18000,
-      requireApproval: true,
-      minRating: 4.6,
-      status: 'active',
-      createdAt: '2026-08-15',
-      lastChecked: '12 mins ago',
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&auto=format&fit=crop&q=80',
-    },
-  ]);
+  const [rules, setRules] = useState<AutoBuyRule[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newProdName, setNewProdName] = useState('');
   const [newTargetPrice, setNewTargetPrice] = useState(12000);
   const [newMaxBudget, setNewMaxBudget] = useState(20000);
   const [newReqAppr, setNewReqAppr] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [ruleRes, setRes] = await Promise.all([
+          fetch('/api/watchlists'),
+          fetch('/api/settings'),
+        ]);
+
+        const ruleData = await ruleRes.json();
+        if (ruleData && ruleData.rules) {
+          setRules(
+            ruleData.rules.map((r: any) => ({
+              id: r.id,
+              productName: r.productName,
+              category: r.category || 'Electronics',
+              targetPrice: r.targetPrice,
+              currentLowestPrice: r.currentLowestPrice,
+              maxBudget: r.maxBudget,
+              requireApproval: r.requireApproval,
+              minRating: 4.5,
+              status: r.status || 'active',
+              createdAt: r.createdAt ? new Date(r.createdAt).toISOString().substring(0, 10) : '2026-08-10',
+              lastChecked: '5 mins ago',
+              image: r.image || 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&auto=format&fit=crop&q=80',
+            }))
+          );
+        }
+
+        const setData = await setRes.json();
+        if (setData && setData.settings) {
+          setSettings(setData.settings);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const handleTogglePause = (id: string) => {
     setRules((prev) =>
@@ -85,26 +98,47 @@ export default function WatchlistsPage() {
     setRules((prev) => prev.filter((r) => r.id !== id));
   };
 
-  const handleCreateRule = (e: React.FormEvent) => {
+  const handleCreateRule = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProdName.trim()) return;
 
-    const newRule: AutoBuyRule = {
-      id: `rule-${Date.now()}`,
-      productName: newProdName,
-      category: 'Electronics',
-      targetPrice: Number(newTargetPrice),
-      currentLowestPrice: Number(newTargetPrice) + 1500,
-      maxBudget: Number(newMaxBudget),
-      requireApproval: newReqAppr,
-      minRating: 4.5,
-      status: 'active',
-      createdAt: new Date().toISOString().substring(0, 10),
-      lastChecked: 'Just now',
-      image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&auto=format&fit=crop&q=80',
-    };
+    try {
+      const res = await fetch('/api/watchlists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: newProdName,
+          targetPrice: Number(newTargetPrice),
+          maxBudget: Number(newMaxBudget),
+          requireApproval: newReqAppr,
+        }),
+      });
 
-    setRules([newRule, ...rules]);
+      const data = await res.json();
+      if (data && data.rule) {
+        const r = data.rule;
+        setRules([
+          {
+            id: r.id,
+            productName: r.productName,
+            category: r.category || 'Electronics',
+            targetPrice: r.targetPrice,
+            currentLowestPrice: r.currentLowestPrice,
+            maxBudget: r.maxBudget,
+            requireApproval: r.requireApproval,
+            minRating: 4.5,
+            status: r.status || 'active',
+            createdAt: new Date().toISOString().substring(0, 10),
+            lastChecked: 'Just now',
+            image: r.image,
+          },
+          ...rules,
+        ]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+
     setNewProdName('');
     setShowAddForm(false);
   };
@@ -207,67 +241,74 @@ export default function WatchlistsPage() {
         )}
 
         {/* Active Rules Grid */}
-        <div className="space-y-4">
-          {rules.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-12 text-center text-slate-400">
-              No active auto-buy trigger rules. Click "Create Auto-Buy Trigger" to set your first background agent rule.
-            </div>
-          ) : (
-            rules.map((rule) => (
-              <div
-                key={rule.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 p-5 gap-4 shadow-xl"
-              >
-                <div className="flex items-center gap-4">
-                  <img src={rule.image} alt={rule.productName} className="h-16 w-16 object-cover rounded-xl bg-slate-950 border border-slate-800" />
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                        rule.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                      }`}>
-                        {rule.status === 'active' ? 'ACTIVE MONITORING' : 'PAUSED'}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-mono">Created {rule.createdAt}</span>
-                    </div>
-
-                    <h3 className="font-bold text-sm text-slate-100">{rule.productName}</h3>
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono pt-1">
-                      <div className="text-slate-400">
-                        Target Price: <strong className="text-emerald-400">{formatINR(rule.targetPrice)}</strong>
+        {loading ? (
+          <div className="py-16 text-center space-y-3 rounded-2xl border border-slate-800 bg-slate-900/60">
+            <RefreshCw className="h-8 w-8 text-cyan-400 animate-spin mx-auto" />
+            <div className="text-xs font-semibold text-slate-300">Fetching auto-buy rules from SQLite Database...</div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {rules.length === 0 ? (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-12 text-center text-slate-400">
+                No active auto-buy trigger rules. Click "Create Auto-Buy Trigger" to set your first background agent rule.
+              </div>
+            ) : (
+              rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/80 p-5 gap-4 shadow-xl"
+                >
+                  <div className="flex items-center gap-4">
+                    <img src={rule.image} alt={rule.productName} className="h-16 w-16 object-cover rounded-xl bg-slate-950 border border-slate-800" />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                          rule.status === 'active'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {rule.status === 'active' ? 'ACTIVE MONITORING' : 'PAUSED'}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono">Created {rule.createdAt}</span>
                       </div>
-                      <div className="text-slate-400">
-                        Lowest Right Now: <strong className="text-slate-200">{formatINR(rule.currentLowestPrice)}</strong>
-                      </div>
-                      <div className="text-slate-400">
-                        Require Approval: <strong className="text-cyan-400">{rule.requireApproval ? 'Yes' : 'No'}</strong>
+
+                      <h3 className="font-bold text-sm text-slate-100">{rule.productName}</h3>
+
+                      <div className="flex flex-wrap items-center gap-4 text-xs font-mono pt-1">
+                        <div className="text-slate-400">
+                          Target Price: <strong className="text-emerald-400">{formatINR(rule.targetPrice)}</strong>
+                        </div>
+                        <div className="text-slate-400">
+                          Lowest Right Now: <strong className="text-slate-200">{formatINR(rule.currentLowestPrice)}</strong>
+                        </div>
+                        <div className="text-slate-400">
+                          Require Approval: <strong className="text-cyan-400">{rule.requireApproval ? 'Yes' : 'No'}</strong>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-2 self-end sm:self-center">
-                  <button
-                    onClick={() => handleTogglePause(rule.id)}
-                    className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-slate-600 transition-colors"
-                  >
-                    {rule.status === 'active' ? <Pause className="h-3.5 w-3.5 text-amber-400" /> : <Play className="h-3.5 w-3.5 text-emerald-400" />}
-                    {rule.status === 'active' ? 'Pause' : 'Resume'}
-                  </button>
+                  <div className="flex items-center gap-2 self-end sm:self-center">
+                    <button
+                      onClick={() => handleTogglePause(rule.id)}
+                      className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-slate-600 transition-colors"
+                    >
+                      {rule.status === 'active' ? <Pause className="h-3.5 w-3.5 text-amber-400" /> : <Play className="h-3.5 w-3.5 text-emerald-400" />}
+                      {rule.status === 'active' ? 'Pause' : 'Resume'}
+                    </button>
 
-                  <button
-                    onClick={() => handleDeleteRule(rule.id)}
-                    className="p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    <button
+                      onClick={() => handleDeleteRule(rule.id)}
+                      className="p-2 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
 
       </main>
     </div>

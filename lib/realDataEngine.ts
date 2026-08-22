@@ -124,8 +124,8 @@ export async function searchRealLiveProducts(query: string): Promise<Product[]> 
       const data = await res.json();
       if (data.products && data.products.length > 0) {
         return data.products.map((p: RealApiProduct) => {
-          // Convert USD price to realistic INR price
-          const priceINR = Math.round(p.price * USD_TO_INR);
+          // Convert USD price to realistic INR price (minimum ₹499 for electronics)
+          const priceINR = Math.max(499, Math.round(p.price * USD_TO_INR));
           const sentiment = analyzeRealProductSentiment(p.title, p.rating, p.reviews || []);
           const retailers = generateIndianStoreListings(priceINR);
 
